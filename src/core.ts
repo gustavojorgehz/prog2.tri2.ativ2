@@ -22,30 +22,73 @@ const queryDeleteItem = db.query("DELETE FROM items WHERE id = $id")
 const queryUpdateItem = db.query("UPDATE items SET title = $title WHERE id = $id")
 
 class Item {
-  constructor(public title: string) { }
+  private _id: number;
+  constructor(
+    public title: string,
+    id?: number,
+  ) {
+    if (id) {
+      this._id = id;
+    } else {
+      const item_number = queryInsertItem.run(this.title).lastInsertRowid;
+      this._id = item_number as number;
+    }
+  }
+  updateItem(newTitle: string) {
+    queryUpdateItem.run(newTitle, this._id);
+    this.title = newTitle;
+  }
+
+  deleteItem() {
+    queryDeleteItem.run(this._id);
+    this._id = NaN;
+    this.title = "";
+  }
+
+  getId() {
+    return this._id;
+  }
 }
 
 
 class TodoList {
-
-  addItem(item: Item) {
-    
-  }
-
-  removeItem(index: number) {
-    
-  }
+  private items: Item[] = querySelectItems
+    .all()
+    .map((i: any) => new Item(i.title, i.id));
 
   getItems() {
-    const items = querySelectItems.all()
-    return items
+    return this.items;
+  }
+
+  addItem(item: Item) {
+    this.items.push(item);
+  }
+
+  removeItems(id: number) {
+    const index = this.items.findIndex((i) => i.getId() === id);
+
+    if (index !== -1) {
+      this.items[index]?.deleteItem();
+      this.items.splice(index, 1);
+    }
+  }
+
+  updateItems(id: number, newTitle: string) {
+    this.items.forEach((i) => {
+      if (i.getId() == id) {
+        i.updateItem(newTitle);
+        i.title = newTitle;
+      }
+    });
   }
 }
 
 
 const lista = new TodoList()
-lista.addItem(new Item("ficar quieto"))
-lista.addItem(new Item("prestar atenção"))
-lista.addItem(new Item("aprender typescript"))
+lista.addItem(new Item("Tira"))
+lista.addItem(new Item("Pôe"))
+lista.addItem(new Item("Deixa ficar"))
+lista.removeItems(1);
+lista.updateItems(3, "guerreiros são guerreiros");
 console.log(lista.getItems())
 
